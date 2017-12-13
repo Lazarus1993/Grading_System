@@ -16,11 +16,21 @@ function updateFeedback (req, res, basePath, cb) {
 	if (feedbackUpdated == false) {
 	    cb({
             code:200,
-            message:"Updated successfully"
+            message:"Updated successfully",
+            data:{
+                feedback:oldFeedback
+            }
         })
     } else {
+	    let readerIndex = [];
+	    let closeReaderIndex;
         for (let i = 0; i < splitFeedback.length; i++) {
-            if (splitFeedback[i].includes('#READER:')) {
+            console.log("previous",i,splitFeedback[i]);
+            if (i == 0) {
+                let insertGrades = splitFeedback[0].split(',');
+                insertGrades[1] = grades;
+                splitFeedback[0] = insertGrades[0] + ',' + insertGrades[1] + ',' + insertGrades[2];
+            } else if (splitFeedback[i].includes('#READER:')) {
                 if (gradesUpdated == false) {
                     splitFeedback.splice(i + 1, 0, "Grades - " + grades);
                     gradesUpdated = true;
@@ -29,9 +39,14 @@ function updateFeedback (req, res, basePath, cb) {
                     let string = newFeedback[j].grade + '\xa0' + newFeedback[j].fullForm;
                     splitFeedback.splice(i + 2, 0, string);
                 }
-                splitFeedback.splice(i + newFeedback.length + 2, 0, "</#READER>");
-                break;
+                closeReaderIndex = i + newFeedback.length + 2;
+            } else if (splitFeedback[i].includes('</#READER>')) {
+                readerIndex.push(i);
             }
+        }
+
+        if(readerIndex.length == 0) {
+            splitFeedback[closeReaderIndex] = "</#READER>";
         }
 
         if (gradesUpdated == false) {
@@ -57,8 +72,8 @@ function updateFeedback (req, res, basePath, cb) {
                         }
                     }
 
-                    let pathArr = [path, codePath]
-                    async.map(pathArr, (filePath, cb1) => {
+                    let pathArr = [path, codePath]		//file paths
+                    async.map(pathArr, (filePath, cb1) => {		//filePath = iteratee
                         fs.writeFile(filePath + '/feedback.txt', feedback, (err) => {
                             if (err) {
                                 cb({
@@ -73,7 +88,10 @@ function updateFeedback (req, res, basePath, cb) {
                     }, (cb1) => {
                         cb({
                             code: 200,
-                            message: "Success"
+                            message: "Success",
+                            data:{
+                                feedback:feedback
+                            }
                         })
                     })
                 }

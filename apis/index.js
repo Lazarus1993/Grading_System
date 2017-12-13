@@ -8,7 +8,7 @@ const loadStudents = require('./loadStudents.js');
 const loadAssignmentsList = require('./loadAssignmentsList.js');
 const downloadFile = require('./downloadFile.js');
 
-const basePath = 'H:/401-handin/'
+const basePath = __dirname + '/401-handin/'
 
 app.use(bodyParser.json());
 
@@ -63,7 +63,7 @@ app.post('/loadStudentCode',(req,res,next) => {
 })
 
 app.get('/loadRubric',(req,res,next) => {
-	loadRubric.loadRubric(req,res,(response) => {
+	loadRubric.loadRubric(req, res, basePath, (response) => {
 		res.send(response);
 	})
 })

@@ -1,29 +1,28 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux'
-import { ToastContainer, toast } from 'react-toastify';
-import '../../node_modules/react-toastify/dist/ReactToastify.min.css';
+import Feedback from './feedback.js'
+
 var _ = require('lodash');
-var updateFeedback = require('../actions/updateFeedBackApi.js');
 
 class FeedbackPane extends Component {
 	componentWillMount = () => {
 		this.arrData = [];
-		this.setState({openDeductions:true, openFeedback:true, tableDiv:"", feedback:" ", displayGrade:100})
+		this.setState({tableDiv:"", feedback:" ", displayGrade:0})
 	}
 
 	componentWillReceiveProps = (nextProps) => {
 		let rubricData = nextProps.rubricData
 		let tableArr = [];
-		let grade = this.state.displayGrade;
-
+		this.state.displayGrade = parseInt(this.state.displayGrade);
+		// Add selected guideline from deductions view
 		if(nextProps.rubricOperation == 1) {
-			let x = document.getElementById("deductionsTable").rows.length;			
+			let x = document.getElementById("deductionsTable").rows.length;
 			if(x != 0) {
 				tableArr = this.state.tableDiv
 			} 
 
-			rubricData.id = nextProps.rubricId
-			grade = grade + parseInt(rubricData.grade)
+			rubricData.id = nextProps.rubricId;
+			this.state.displayGrade += parseInt(rubricData.grade);
 			this.arrData.push(rubricData);
 
 			tableArr.push(
@@ -31,13 +30,10 @@ class FeedbackPane extends Component {
 						<td>{rubricData.fullForm} (<label style = {{color:"red"}}>{rubricData.grade}</label>)</td>
 					</tr>
 			)
-			
-			if(this.state.openDeductions == false) {
-				this.setState({openDeductions:true})
-			}
-			this.setState({tableDiv:tableArr, displayGrade:grade})
-		} else {
-			for(let i = 0;i < this.arrData.length; i++) {
+
+			this.setState({tableDiv:tableArr, displayGrade:this.state.displayGrade})
+		} else if(nextProps.rubricOperation == 0){  //Remove selected guideline from deductions view
+            for(let i = 0;i < this.arrData.length; i++) {
 				if(nextProps.rubricId != this.arrData[i].id) {				
 					tableArr.push(
 						<tr align = "left">
@@ -45,62 +41,22 @@ class FeedbackPane extends Component {
 						</tr>
 					)
 				} else {
-					console.log("before ",grade,parseInt(this.arrData[i].grade))
-					grade = grade - parseInt(this.arrData[i].grade)
-					console.log("after ",grade,parseInt(this.arrData[i].grade));
+					this.state.displayGrade -= parseInt(this.arrData[i].grade)
 				}				
 			}
-			this.setState({tableDiv:tableArr, displayGrade:grade})
+			this.setState({tableDiv:tableArr, displayGrade:this.state.displayGrade});
 			this.arrData = _.pullAllBy(this.arrData,[{id:nextProps.rubricId}],'id');
-		}
-
-		this.setState({feedback:nextProps.feedback})
-	}
-
-	updateTextarea = () => {
-		let val = document.getElementById('feedback').value
-		this.setState({feedback:val})
-	}
-
-	submitFeedback = () => {
-        let student = document.getElementById('studDropdown').value
-        let assignment = document.getElementById('assignmentsDropdown').value
-        if (assignment == 'default')
-            toast.error("Please select assignment", {
-                position: toast.POSITION.TOP_CENTER
-            })
-        else if (student == 'default') {
-            toast.error("Please select student", {
-                position: toast.POSITION.TOP_CENTER
-            })
+		} else if(nextProps.rubricOperation == 2) { // Reset deductions view when student or assignment changes
+            this.arrData = [];
+            tableArr = [];
+            this.setState({tableDiv:""})
+			this.setState({displayGrade:nextProps.grades});
         }
-        else {
-            var data = {
-                oldFeedback: this.state.feedback,
-                newFeedback: this.arrData,
-                grades: this.state.displayGrade,
-                student:student,
-                assignment:assignment,
-                feedbackUpdated: this.arrData.length > 0 ? true : false
-            }
-        }
-
-		updateFeedback.update(data,(res)=>{
-			if(res.code == 200) {
-				toast.success("Updated Successfully!!!", {
-			    	position: toast.POSITION.TOP_CENTER
-			    })
-			} else {
-                toast.error(res.message, {
-                    position: toast.POSITION.TOP_CENTER
-                })
-            }
-		})
 	}
 
 	render() {
 		return (<div id = 'feedbackSubmitDiv'>
-					<div id = 'feedbackPane'>
+					<div id = 'deductionsMainDiv'>
 						<div id = 'deductions' className = 'borderProps'>
 							<h4>Deductions</h4>
 							<hr/>
@@ -112,25 +68,12 @@ class FeedbackPane extends Component {
 				        	 		</table>
 				        	 	</div>
 						</div>
-						<div id = 'feedbackDiv' className = 'borderProps'>
-							<h4>Feedback</h4>
-							<hr/>
-							<textarea id='feedback' placeholder='Write feedback' value = {this.state.feedback} onChange = {() => this.updateTextarea()}></textarea>
-	        	 		</div>	        	 	
-		    		</div>
-		    		<div id = 'submit'>
-		        		<button id = 'submitButton' onClick = {this.submitFeedback}>Submit</button>
-		        		<div id = 'grades'>
-		        			<label>Grade:</label><label style={{color:"red"}}>{this.state.displayGrade}</label>
-		        		</div>
-		        	</div>
-		        	<ToastContainer 
-			          type="success"
-			          autoClose={3000}			          
-			          closeOnClick
-			          hideProgressBar		          
-			        />
-		        </div>
+					</div>
+                <Feedback arrData = {this.arrData} displayGrade = {this.state.displayGrade}/>
+                <div id = 'grades'>
+                    <label>Grade:</label><label style={{color:"red"}}>{this.state.displayGrade}</label>
+                </div>
+			</div>
 	    		)
 	}
 }
